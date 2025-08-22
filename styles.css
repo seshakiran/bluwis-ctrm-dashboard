@@ -271,6 +271,10 @@ body {
     background: var(--bg-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .kpi-item:hover {
@@ -283,6 +287,14 @@ body {
     font-weight: 500;
     color: var(--text-secondary);
     margin-bottom: 8px;
+}
+
+.kpi-item canvas {
+    width: 120px !important;
+    height: 40px !important;
+    max-width: 120px !important;
+    max-height: 40px !important;
+    margin: 0 auto;
 }
 
 .kpi-value {
