@@ -15,16 +15,30 @@ export function seededRandom(seed=42) {
 
 const rand = seededRandom(123);
 
-// Generate 365 days of prices with drift + seasonality + noise
-function genSeries(base=80, amp=5, drift=0.02, days=365) {
+// Generate price series with reduced data points for performance
+function genSeries(base=80, amp=5, drift=0.02, days=90) { // Reduced from 365 to 90 days
   const out = [];
   let v = base;
   const start = new Date();
   start.setDate(start.getDate() - days);
-  for (let i=0;i<days;i++) {
-    const d = new Date(start); d.setDate(start.getDate()+i);
-    v += drift + (amp * Math.sin(i/25)) * 0.02 + (rand()-0.5) * 0.6;
-    out.push({ date: d.toISOString().slice(0,10), price: Math.round((v)*100)/100 });
+  
+  for (let i=0; i<days; i++) {
+    const d = new Date(start); 
+    d.setDate(start.getDate() + i);
+    
+    // More controlled price movement
+    const seasonality = (amp * Math.sin(i/25)) * 0.02;
+    const noise = (rand() - 0.5) * 0.3; // Reduced noise
+    v += drift + seasonality + noise;
+    
+    // Keep prices in reasonable range
+    v = Math.max(v, base * 0.7);
+    v = Math.min(v, base * 1.3);
+    
+    out.push({ 
+      date: d.toISOString().slice(0,10), 
+      price: Math.round(v * 100) / 100 
+    });
   }
   return out;
 }
@@ -34,18 +48,21 @@ export const marketPrices = {
   Brent: genSeries(82)
 };
 
-// Forecast bands for next 30 days
-export function genForecast(last, days=30) {
+// Forecast bands for next few days (reduced for performance)
+export function genForecast(last, days=15) { // Reduced from 30 to 15 days
   const out = [];
   let v = last;
-  for (let i=1;i<=days;i++) {
-    v += 0.03 + (rand()-0.5) * 0.3;
+  
+  for (let i=1; i<=days; i++) {
+    // More controlled forecast movement
+    v += 0.02 + (rand() - 0.5) * 0.2; // Reduced volatility
     const q50 = v;
+    
     out.push({
       date: new Date(Date.now() + 86400000*i).toISOString().slice(0,10),
-      q10: q50 - 1.0,
-      q50: q50,
-      q90: q50 + 1.0
+      q10: Math.round((q50 - 0.8) * 100) / 100,
+      q50: Math.round(q50 * 100) / 100,
+      q90: Math.round((q50 + 0.8) * 100) / 100
     });
   }
   return out;

@@ -35,13 +35,13 @@ function initApp() {
     renderRecs();
     renderHeatmap();
     
-    // Initialize charts with delay for better UX
+    // Initialize charts immediately
     initCharts();
     
-    // Initialize flow arrows
+    // Initialize flow arrows after a short delay
     setTimeout(() => {
       initFlowArrows();
-    }, 1000);
+    }, 100);
     
     // Wire up tour
     const tourButton = document.getElementById('startTour');
@@ -63,37 +63,36 @@ function initApp() {
   }
 }
 
-// Initialize charts with staggered loading
+// Initialize charts immediately for better performance
 function initCharts() {
   console.log('📊 Initializing charts...');
   
-  // KPI sparklines
-  setTimeout(() => {
-    try {
-      const kpiCanvasIds = ['kpi1', 'kpi2', 'kpi3', 'kpi4'];
-      initKpis(kpiCanvasIds);
-    } catch (error) {
-      console.error('Error initializing KPIs:', error);
-    }
-  }, 200);
+  // Check if dependencies are loaded
+  if (!window.Chart) {
+    console.error('Chart.js not loaded');
+    return;
+  }
   
-  // Market chart
-  setTimeout(() => {
-    try {
-      initMarketChart('marketChart');
-    } catch (error) {
-      console.error('Error initializing market chart:', error);
-    }
-  }, 400);
+  if (!window.L) {
+    console.error('Leaflet not loaded');
+    return;
+  }
   
-  // Vessel map
-  setTimeout(() => {
-    try {
-      initMap('vesselMap');
-    } catch (error) {
-      console.error('Error initializing map:', error);
-    }
-  }, 600);
+  try {
+    // Initialize all charts immediately
+    const kpiCanvasIds = ['kpi1', 'kpi2', 'kpi3', 'kpi4'];
+    initKpis(kpiCanvasIds);
+    
+    initMarketChart('marketChart');
+    
+    initMap('vesselMap');
+    
+    console.log('✅ All charts initialized successfully');
+    
+  } catch (error) {
+    console.error('❌ Error initializing charts:', error);
+    showErrorMessage('Failed to initialize charts. Please refresh the page.');
+  }
 }
 
 // Handle filter changes

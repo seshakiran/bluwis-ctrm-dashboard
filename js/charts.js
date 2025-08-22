@@ -12,14 +12,30 @@ export const charts = {
 export function initKpis(canvasIds) {
   canvasIds.forEach((id, idx) => {
     const canvas = document.getElementById(id);
-    if (!canvas) return;
+    if (!canvas) {
+      console.warn(`KPI canvas ${id} not found`);
+      return;
+    }
     
-    const ctx = canvas.getContext('2d');
-    const key = idx % 2 === 0 ? 'WTI' : 'Brent';
-    const data = marketPrices[key].slice(-60).map(d => d.price);
+    // Set explicit canvas dimensions to prevent resize issues
+    canvas.width = 120;
+    canvas.height = 40;
+    canvas.style.width = '120px';
+    canvas.style.height = '40px';
     
-    // Add loading shimmer
-    setTimeout(() => {
+    try {
+      const ctx = canvas.getContext('2d');
+      const key = idx % 2 === 0 ? 'WTI' : 'Brent';
+      const priceData = marketPrices[key];
+      
+      if (!priceData || priceData.length === 0) {
+        console.error(`No price data found for ${key}`);
+        return;
+      }
+      
+      const data = priceData.slice(-30).map(d => d.price); // Reduced data points
+      
+      // Create chart immediately without setTimeout to avoid timing issues
       const chart = new window.Chart(ctx, {
         type: 'line',
         data: { 
@@ -30,38 +46,55 @@ export function initKpis(canvasIds) {
             pointRadius: 0, 
             tension: 0.3,
             borderColor: idx % 2 === 0 ? '#2563eb' : '#059669',
-            borderWidth: 2
+            borderWidth: 1.5
           }] 
         },
         options: { 
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } }, 
+          responsive: false, // Disable responsive to prevent resize loops
+          maintainAspectRatio: true,
+          animation: false, // Disable animations for performance
+          plugins: { 
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }, 
           scales: { 
             x: { display: false },
             y: { display: false }
           },
           elements: {
-            line: {
-              tension: 0.3
-            }
+            line: { tension: 0.3 },
+            point: { radius: 0 }
           }
         }
       });
+      
       charts.kpis.push(chart);
-    }, 500 + idx * 100);
+      console.log(`✅ KPI chart ${id} initialized successfully`);
+      
+    } catch (error) {
+      console.error(`Error initializing KPI chart ${id}:`, error);
+    }
   });
 }
 
 export function initMarketChart(canvasId, seriesKey='WTI') {
   const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
+  if (!canvas) {
+    console.warn(`Market chart canvas ${canvasId} not found`);
+    return;
+  }
   
-  const ctx = canvas.getContext('2d');
-  const wtiSeries = marketPrices.WTI.slice(-90);
-  const brentSeries = marketPrices.Brent.slice(-90);
-  
-  setTimeout(() => {
+  try {
+    const ctx = canvas.getContext('2d');
+    const wtiSeries = marketPrices.WTI.slice(-60); // Reduced data points
+    const brentSeries = marketPrices.Brent.slice(-60);
+    
+    if (!wtiSeries.length || !brentSeries.length) {
+      console.error('No market price data available');
+      return;
+    }
+    
+    // Create chart immediately without setTimeout
     charts.market = new window.Chart(ctx, {
       type: 'line',
       data: {
@@ -90,12 +123,16 @@ export function initMarketChart(canvasId, seriesKey='WTI') {
       options: { 
         responsive: true, 
         maintainAspectRatio: false,
+        animation: {
+          duration: 0 // Disable animations for performance
+        },
         scales: {
           x: { 
             display: true,
             type: 'category',
             ticks: {
-              maxTicksLimit: 10
+              maxTicksLimit: 8,
+              maxRotation: 0
             }
           },
           y: {
@@ -103,6 +140,9 @@ export function initMarketChart(canvasId, seriesKey='WTI') {
             title: {
               display: true,
               text: 'Price ($)'
+            },
+            ticks: {
+              maxTicksLimit: 6
             }
           }
         },
@@ -123,80 +163,87 @@ export function initMarketChart(canvasId, seriesKey='WTI') {
         }
       }
     });
-  }, 600);
+    
+    console.log('✅ Market chart initialized successfully');
+    
+  } catch (error) {
+    console.error('Error initializing market chart:', error);
+  }
 }
 
 export function toggleForecast(show) {
-  if (!charts.market) return;
-  
-  // Remove existing forecast bands
-  charts.market.data.datasets = charts.market.data.datasets.filter(ds=>!ds._isForecast);
-  
-  if (show) {
-    const f = forecast;
-    const extendedLabels = [...charts.market.data.labels, ...f.map(d=>d.date)];
-    
-    // Extend main datasets with null values for forecast period
-    charts.market.data.datasets.forEach(ds => {
-      const nullExtension = new Array(f.length).fill(null);
-      ds.data = [...ds.data.slice(0, charts.market.data.labels.length), ...nullExtension];
-    });
-    
-    // Add forecast bands
-    charts.market.data.datasets.push(
-      { 
-        label: 'Forecast Q10', 
-        data: [...new Array(charts.market.data.labels.length).fill(null), ...f.map(d=>d.q10)], 
-        borderDash: [4,2], 
-        pointRadius: 0, 
-        tension: 0.2, 
-        borderColor: 'rgba(37, 99, 235, 0.3)',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        fill: '+2',
-        _isForecast: true 
-      },
-      { 
-        label: 'Forecast Q50', 
-        data: [...new Array(charts.market.data.labels.length).fill(null), ...f.map(d=>d.q50)], 
-        pointRadius: 0, 
-        tension: 0.2, 
-        borderColor: 'rgba(37, 99, 235, 0.6)',
-        borderWidth: 1,
-        _isForecast: true 
-      },
-      { 
-        label: 'Forecast Q90', 
-        data: [...new Array(charts.market.data.labels.length).fill(null), ...f.map(d=>d.q90)], 
-        borderDash: [4,2], 
-        pointRadius: 0, 
-        tension: 0.2, 
-        borderColor: 'rgba(37, 99, 235, 0.3)',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        fill: '-1',
-        _isForecast: true 
-      }
-    );
-    
-    charts.market.data.labels = extendedLabels;
+  if (!charts.market) {
+    console.warn('Market chart not initialized for forecast toggle');
+    return;
   }
   
-  charts.market.update('none');
+  try {
+    // Remove existing forecast bands
+    charts.market.data.datasets = charts.market.data.datasets.filter(ds=>!ds._isForecast);
+    
+    if (show) {
+      const f = forecast.slice(0, 20); // Limit forecast data points
+      const originalLabels = charts.market.data.labels.slice(); // Store original labels
+      const originalDatasetLength = originalLabels.length;
+      
+      // Simplified forecast overlay without extending labels
+      charts.market.data.datasets.push(
+        { 
+          label: 'Forecast', 
+          data: [...new Array(originalDatasetLength).fill(null), ...f.map(d=>d.q50)], 
+          borderDash: [5,5], 
+          pointRadius: 0, 
+          tension: 0.2, 
+          borderColor: 'rgba(37, 99, 235, 0.7)',
+          borderWidth: 2,
+          fill: false,
+          _isForecast: true 
+        }
+      );
+      
+      // Extend labels for forecast
+      charts.market.data.labels = [...originalLabels, ...f.map(d=>d.date)];
+    }
+    
+    // Use animation: false for performance
+    charts.market.update('none');
+    console.log(`✅ Forecast ${show ? 'enabled' : 'disabled'}`);
+    
+  } catch (error) {
+    console.error('Error toggling forecast:', error);
+  }
 }
 
 export function initMap(elemId='vesselMap') {
   const mapElement = document.getElementById(elemId);
-  if (!mapElement || !window.L) return;
+  if (!mapElement) {
+    console.warn(`Map element ${elemId} not found`);
+    return;
+  }
   
-  setTimeout(() => {
-    charts.map = window.L.map(elemId).setView([40,-20], 3);
+  if (!window.L) {
+    console.warn('Leaflet library not loaded');
+    return;
+  }
+  
+  try {
+    // Initialize map immediately without setTimeout
+    charts.map = window.L.map(elemId, {
+      zoomControl: true,
+      attributionControl: true
+    }).setView([40,-20], 3);
+    
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://openstreetmap.org">OSM</a>'
+      attribution: '&copy; <a href="https://openstreetmap.org">OSM</a>',
+      maxZoom: 10 // Limit zoom for performance
     }).addTo(charts.map);
 
     // Add port markers
+    const markers = [];
     vessels.ports.forEach(p => {
       const marker = window.L.marker([p.lat, p.lon]).addTo(charts.map);
       marker.bindPopup(`<strong>${p.name}</strong><br/>Port facility`);
+      markers.push(marker);
     });
     
     // Add route polyline
@@ -206,21 +253,15 @@ export function initMap(elemId='vesselMap') {
       opacity: 0.7
     }).addTo(charts.map);
     
-    // Add route labels
-    const midPoint = vessels.route[Math.floor(vessels.route.length/2)];
-    window.L.marker(midPoint, {
-      icon: window.L.divIcon({
-        className: 'route-label',
-        html: '<div style="background: rgba(37,99,235,0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">Rotterdam → Houston</div>',
-        iconSize: [120, 20],
-        iconAnchor: [60, 10]
-      })
-    }).addTo(charts.map);
-    
-    // Fit bounds to show all markers
-    const group = new window.L.featureGroup([routeLine, ...vessels.ports.map(p => window.L.marker([p.lat, p.lon]))]);
+    // Fit bounds to show all content
+    const group = new window.L.featureGroup([routeLine, ...markers]);
     charts.map.fitBounds(group.getBounds().pad(0.1));
-  }, 800);
+    
+    console.log('✅ Vessel map initialized successfully');
+    
+  } catch (error) {
+    console.error('Error initializing map:', error);
+  }
 }
 
 export function updateKpis(filters) {
