@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluwis - CTRM + AI Dashboard</title>
+    
+    <!-- 
+    README: Bluwis CTRM + AI Dashboard
+    
+    How to run:
+    1. Open index.html in a modern browser (Chrome, Firefox, Safari, Edge)
+    2. All dependencies load via CDN, internet connection required
+    3. For testing, run: python3 -m http.server 8000
+    
+    How to customize:
+    - Data: Edit js/data.js for dummy datasets
+    - Charts: Modify js/charts.js for Chart.js settings  
+    - UI: Update js/ui.js for interactions
+    - Styling: Adjust styles.css for appearance
+    - Tour: Customize js/tour.js for guided walkthrough
+    
+    Features:
+    - Responsive design works on desktop and mobile
+    - Keyboard navigation and screen reader support
+    - Interactive filters, charts, and data drill-down
+    - Guided tour (click "Start Tour" button)
+    - Flow arrows show data relationships
+    
+    Validation:
+    - Copy validate.js content into browser console to test functionality
+    -->
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <nav class="top-nav" role="navigation" aria-label="Main navigation">
+            <div class="nav-items">
+                <button class="nav-item active" data-section="book">Book</button>
+                <button class="nav-item" data-section="market">Market</button>
+                <button class="nav-item" data-section="logistics">Logistics</button>
+                <button class="nav-item" data-section="ai">AI Insights</button>
+                <button class="nav-item" data-section="reports">Reports</button>
+            </div>
+            <div class="nav-actions">
+                <button id="startTour" class="btn-tour">Start Tour</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Sidebar Filters -->
+            <aside class="sidebar" id="filters" role="complementary" aria-label="Filters">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button id="resetFilters" class="btn-reset">Reset</button>
+                </div>
+                <div class="filter-group">
+                    <label for="commodityFilter">Commodity</label>
+                    <select id="commodityFilter" aria-label="Select commodity">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="locationFilter">Location</label>
+                    <select id="locationFilter" aria-label="Select location">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="counterpartyFilter">Counterparty</label>
+                    <select id="counterpartyFilter" aria-label="Select counterparty">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="dateFilter">Date</label>
+                    <input type="date" id="dateFilter" aria-label="Select date">
+                </div>
+            </aside>
+
+            <!-- Dashboard Content -->
+            <main class="dashboard" role="main">
+                <!-- Overview Header -->
+                <div class="overview-header">
+                    <h2>Overview</h2>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+                    <!-- KPI Metrics Card -->
+                    <div class="card metrics-card" id="kpis">
+                        <div class="card-header">
+                            <h3>Metrics</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="kpi-grid">
+                                <div class="kpi-item" data-kpi="wti">
+                                    <div class="kpi-label">WTI Δ</div>
+                                    <canvas id="kpi1" width="120" height="40"></canvas>
+                                    <div class="kpi-value">+2.3%</div>
+                                </div>
+                                <div class="kpi-item" data-kpi="brent">
+                                    <div class="kpi-label">Brent Δ</div>
+                                    <canvas id="kpi2" width="120" height="40"></canvas>
+                                    <div class="kpi-value">+1.8%</div>
+                                </div>
+                                <div class="kpi-item" data-kpi="basis">
+                                    <div class="kpi-label">Basis HOU-RTM</div>
+                                    <canvas id="kpi3" width="120" height="40"></canvas>
+                                    <div class="kpi-value">-0.5%</div>
+                                </div>
+                                <div class="kpi-item" data-kpi="hedge">
+                                    <div class="kpi-label">Hedge Ratio</div>
+                                    <canvas id="kpi4" width="120" height="40"></canvas>
+                                    <div class="kpi-value">78%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trade Capture Card -->
+                    <div class="card trade-card">
+                        <div class="card-header">
+                            <h3>Trade Capture</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="table-container">
+                                <table id="tradeTable" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Commodity</th>
+                                            <th>Venue</th>
+                                            <th>Side</th>
+                                            <th>Qty (bbl)</th>
+                                            <th>Price</th>
+                                            <th>Counterparty</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tradeTableBody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Market Prices Card -->
+                    <div class="card market-card" id="marketCard">
+                        <div class="card-header">
+                            <h3>Market Prices</h3>
+                            <div class="card-controls">
+                                <label class="toggle-control">
+                                    <input type="checkbox" id="forecastToggle">
+                                    <span>Forecast Overlay</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <canvas id="marketChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- AI Recommendations Card -->
+                    <div class="card recs-card" id="recs">
+                        <div class="card-header">
+                            <h3>AI Recommendations</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="recommendationsList" class="recommendations-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Metrics Card -->
+                    <div class="card risk-card" id="riskMap">
+                        <div class="card-header">
+                            <h3>Risk Metrics</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="riskHeatmap" class="risk-heatmap">
+                                <!-- Populated by JS -->
+                            </div>
+                            <div class="risk-legend">
+                                <span class="legend-label">Low</span>
+                                <div class="legend-gradient"></div>
+                                <span class="legend-label">High</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vessel Tracking Card -->
+                    <div class="card vessel-card">
+                        <div class="card-header">
+                            <h3>Vessel Tracking</h3>
+                        </div>
+                        <div class="card-content">
+                            <div id="vesselMap" class="vessel-map"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow Arrows SVG -->
+                <svg class="flow-arrows" aria-hidden="true">
+                    <!-- Metric → Trade Capture -->
+                    <path id="arrow1" class="flow-arrow" d="M 300 250 Q 350 280 400 300" marker-end="url(#arrowhead)"/>
+                    <text class="arrow-label" x="350" y="275">Invoice / Settlement</text>
+                    
+                    <!-- Metric → Market Prices -->
+                    <path id="arrow2" class="flow-arrow" d="M 300 300 Q 450 350 600 400" marker-end="url(#arrowhead)"/>
+                    
+                    <!-- Market Prices → AI Recommendations -->
+                    <path id="arrow3" class="flow-arrow" d="M 700 450 Q 750 500 800 550" marker-end="url(#arrowhead)"/>
+                    <text class="arrow-label" x="750" y="495">Forecast Data</text>
+                    
+                    <!-- Trade Capture ↔ Market Prices (bidirectional) -->
+                    <path id="arrow4" class="flow-arrow" d="M 500 350 Q 550 375 600 400" marker-end="url(#arrowhead)"/>
+                    <path id="arrow5" class="flow-arrow" d="M 600 420 Q 550 395 500 370" marker-end="url(#arrowhead)"/>
+                    
+                    <!-- Arrow marker definition -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                         refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                        </marker>
+                    </defs>
+                </svg>
+            </main>
+        </div>
+    </div>
+
+    <!-- Trade Details Drawer -->
+    <div id="tradeDrawer" class="drawer" role="dialog" aria-labelledby="drawerTitle" aria-hidden="true">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h3 id="drawerTitle">Trade Details</h3>
+                <button id="closeDrawer" class="btn-close" aria-label="Close drawer">&times;</button>
+            </div>
+            <div class="drawer-body" id="drawerBody">
+                <!-- Populated by JS -->
+            </div>
+            <div class="drawer-footer">
+                <button id="invoiceButton" class="btn-primary">Invoice / Settlement</button>
+            </div>
+        </div>
+        <div class="drawer-overlay" id="drawerOverlay"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner" aria-hidden="true">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/charts.js"></script>
+    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/tour.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

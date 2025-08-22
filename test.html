@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Testing Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Test Results</h1>
+    <div id="results"></div>
+    
+    <script>
+        function addResult(message, status) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.textContent = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        // Test if main page loads
+        fetch('/')
+            .then(response => {
+                if (response.ok) {
+                    addResult('✓ Main page loads successfully', 'pass');
+                    return response.text();
+                } else {
+                    throw new Error('Page failed to load');
+                }
+            })
+            .then(html => {
+                // Test for required elements
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const tests = [
+                    { selector: '#kpis', name: 'KPI Metrics section' },
+                    { selector: '#tradeTable', name: 'Trade table' },
+                    { selector: '#marketChart', name: 'Market chart canvas' },
+                    { selector: '#recs', name: 'Recommendations section' },
+                    { selector: '#riskHeatmap', name: 'Risk heatmap' },
+                    { selector: '#vesselMap', name: 'Vessel map' },
+                    { selector: '#startTour', name: 'Tour button' },
+                    { selector: '.flow-arrows', name: 'Flow arrows SVG' }
+                ];
+                
+                tests.forEach(test => {
+                    const element = doc.querySelector(test.selector);
+                    if (element) {
+                        addResult(`✓ ${test.name} found in HTML`, 'pass');
+                    } else {
+                        addResult(`✗ ${test.name} missing from HTML`, 'fail');
+                    }
+                });
+                
+                // Test for CSS file
+                const cssLink = doc.querySelector('link[href="styles.css"]');
+                if (cssLink) {
+                    addResult('✓ CSS file linked', 'pass');
+                } else {
+                    addResult('✗ CSS file not linked', 'fail');
+                }
+                
+                // Test for JS modules
+                const jsModules = doc.querySelectorAll('script[type="module"]');
+                if (jsModules.length >= 5) {
+                    addResult(`✓ JavaScript modules found (${jsModules.length})`, 'pass');
+                } else {
+                    addResult(`✗ Missing JavaScript modules (found ${jsModules.length})`, 'fail');
+                }
+                
+                // Test CDN links
+                const chartJs = doc.querySelector('script[src*="chart.js"]');
+                const leafletJs = doc.querySelector('script[src*="leaflet"]');
+                const leafletCss = doc.querySelector('link[href*="leaflet"]');
+                
+                if (chartJs) addResult('✓ Chart.js CDN linked', 'pass');
+                else addResult('✗ Chart.js CDN missing', 'fail');
+                
+                if (leafletJs) addResult('✓ Leaflet JS CDN linked', 'pass');
+                else addResult('✗ Leaflet JS CDN missing', 'fail');
+                
+                if (leafletCss) addResult('✓ Leaflet CSS CDN linked', 'pass');
+                else addResult('✗ Leaflet CSS CDN missing', 'fail');
+            })
+            .catch(error => {
+                addResult(`✗ Error testing page: ${error.message}`, 'fail');
+            });
+        
+        // Test static files
+        const staticFiles = [
+            'styles.css',
+            'js/data.js',
+            'js/charts.js',
+            'js/ui.js',
+            'js/tour.js',
+            'js/app.js'
+        ];
+        
+        staticFiles.forEach(file => {
+            fetch(file)
+                .then(response => {
+                    if (response.ok) {
+                        addResult(`✓ ${file} loads successfully`, 'pass');
+                    } else {
+                        addResult(`✗ ${file} failed to load (${response.status})`, 'fail');
+                    }
+                })
+                .catch(error => {
+                    addResult(`✗ ${file} error: ${error.message}`, 'fail');
+                });
+        });
+        
+        addResult('Test completed - check browser console for JavaScript errors', 'info');
+    </script>
+</body>
+</html>
