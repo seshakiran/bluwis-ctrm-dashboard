@@ -238,11 +238,17 @@ export function initMap(elemId='vesselMap') {
       maxZoom: 10 // Limit zoom for performance
     }).addTo(charts.map);
 
-    // Add port markers
+    // Add port markers with detailed info
     const markers = [];
     vessels.ports.forEach(p => {
       const marker = window.L.marker([p.lat, p.lon]).addTo(charts.map);
-      marker.bindPopup(`<strong>${p.name}</strong><br/>Port facility`);
+      marker.bindPopup(`
+        <div style="min-width: 200px;">
+          <strong>${p.name}</strong><br/>
+          <strong>Cargo:</strong> ${p.cargo}<br/>
+          <strong>Status:</strong> <span style="color: ${p.status === 'Loading' ? '#059669' : p.status === 'Discharging' ? '#d97706' : '#2563eb'}">${p.status}</span>
+        </div>
+      `);
       markers.push(marker);
     });
     
