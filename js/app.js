@@ -30,10 +30,13 @@ function initApp() {
     wireForecastToggle();
     wireKpiClicks();
     
-    // Initial render of data components
-    renderTrades();
-    renderRecs();
-    renderHeatmap();
+    // Initial render of data components with delay to ensure DOM is ready
+    setTimeout(() => {
+      renderTrades();
+      renderRecs();
+      renderHeatmap();
+      console.log('✅ Initial data rendered');
+    }, 100);
     
     // Initialize charts immediately
     initCharts();

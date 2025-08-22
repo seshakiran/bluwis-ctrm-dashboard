@@ -73,6 +73,9 @@ export function initKpis(canvasIds) {
       
     } catch (error) {
       console.error(`Error initializing KPI chart ${id}:`, error);
+      // Fallback: show static data visualization
+      canvas.style.background = `linear-gradient(45deg, ${idx % 2 === 0 ? '#2563eb' : '#059669'}, transparent)`;
+      canvas.style.opacity = '0.3';
     }
   });
 }

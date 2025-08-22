@@ -84,9 +84,13 @@ function resetFilters() {
 // Render trades table
 export function renderTrades() {
   const tbody = document.getElementById('tradeTableBody');
-  if (!tbody) return;
+  if (!tbody) {
+    console.error('Trade table body not found');
+    return;
+  }
   
   const filteredTrades = getFilteredTrades();
+  console.log(`Rendering ${filteredTrades.length} trades`);
   
   tbody.innerHTML = filteredTrades.map(trade => `
     <tr data-trade-id="${trade.id}" role="button" tabindex="0" aria-label="View trade details for ${trade.commodity} ${trade.side}">
@@ -121,7 +125,11 @@ export function renderTrades() {
 // Render recommendations
 export function renderRecs() {
   const container = document.getElementById('recommendationsList');
-  if (!container) return;
+  if (!container) {
+    console.error('Recommendations container not found');
+    return;
+  }
+  console.log(`Rendering ${recs.length} recommendations`);
   
   container.innerHTML = recs.map(rec => `
     <div class="recommendation-item" data-rec-id="${rec.id}">
